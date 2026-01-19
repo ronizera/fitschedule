@@ -1,8 +1,9 @@
 import { prisma } from "@/lib/prisma";
-import { error } from "console";
 import { NextResponse } from "next/server";
-import { json } from "stream/consumers";
 
+
+
+//criacao da api de agendamento
 export async function POST(req: Request) {
     try{
         const body = await req.json()
@@ -29,4 +30,23 @@ export async function POST(req: Request) {
             {status: 500}
         )
     }   
+}
+
+
+//buscar agendamentos do usuário
+export async function GET(req: Request) {
+    const {searchParams} = new URL(req.url)
+    const userId = searchParams.get("userId")
+
+    if(!userId) {
+        return NextResponse.json(
+            {error: "Usuario nao informados"},
+            {status: 400}
+        )
+    }
+
+    const appointments = await prisma.appointment.findMany({
+        where: {userId},
+        orderBy: {date: "asc"}
+    })
 }
