@@ -24,6 +24,37 @@ export async function POST(request: Request) {
             where: {email},
         })
 
+        if(existingEmail){
+            return NextResponse.json(
+                {error: "Email ja cadastrado"},
+                {status: 409}
+            )
+        }
+
+        // hash da senha
+
+        const saltRounds = 10
+        const hashedPassword = await bcrypt.hash(password,saltRounds)
+
+        //criar usuario
+        await prisma.user.create({
+            data: {
+                name,
+                email,
+                passwordHash: hashedPassword,
+            }
+        })
+
+        return NextResponse.json(
+            {message: "usuario criado com sucesso"},
+            {status: 201}
+        )
+
         
+    }catch (err){
+        return NextResponse.json(
+            {error: "Erro interno no servidor"},
+            {status: 500}
+        )
     }
 }
