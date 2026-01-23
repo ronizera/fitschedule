@@ -1,59 +1,92 @@
 import { prisma } from "@/lib/prisma"
+import { NextResponse } from "next/server"
 import { cookies } from "next/headers"
 import { getSession } from "@/lib/session"
-import { NextResponse } from "next/server"
 
-//criar agendamento
-export async function POST(req: Request) {
-  try {
-    const cookieStore = await cookies()
-    const sessionId = cookieStore.get("sessionId")?.value
+// BUSCAR AGENDAMENTOS DO USUÁRIO LOGADO
+export async function GET() {
+  const cookieStore = await cookies()
+  const sessionId = cookieStore.get("sessionId")?.value
 
-    const user = await getSession(sessionId)
+  const user = await getSession(sessionId)
 
-    if (!user) {
-      return NextResponse.json(
-        { error: "Não autorizado" },
-        { status: 401 }
-      )
-    }
-
-    const { date } = await req.json()
-
-    if (!date) {
-      return NextResponse.json(
-        { error: "Data é obrigatória" },
-        { status: 400 }
-      )
-    }
-
-    const appointmentDate = new Date(date)
-
-    //ver se possui algum conflito
-    const conflict = await prisma.appointment.findFirst({
-      where: { date: appointmentDate }
-    })
-
-    if (conflict) {
-      return NextResponse.json(
-        { error: "Horário indisponível" },
-        { status: 409 }
-      )
-    }
-
-    const appointment = await prisma.appointment.create({
-      data: {
-        userId: user.id,
-        date: appointmentDate
-      }
-    })
-
-    return NextResponse.json(appointment, { status: 201 })
-
-  } catch {
+  if (!user) {
     return NextResponse.json(
-      { error: "Erro ao criar agendamento" },
-      { status: 500 }
+      { error: "Não autenticado" },
+      { status: 401 }
     )
   }
+
+  const appointments = await prisma.appointment.findMany({
+    where: {
+      userId: user.id,
+    },
+    orderBy: {
+      date: "asc",
+    },
+  })
+
+  return NextResponse.json(appointments)
+}
+
+// CRIAR AGENDAMENTO
+export async function POST(req: Request) {
+  const cookieStore = await cookies()
+  const sessionId = cookieStore.get("sessionId")?.value
+
+  const user = await getSession(sessionId)
+
+  if (!user) {
+    return NextResponse.json(
+      { error: "Não autenticado" },
+      { status: 401 }
+    )
+  }
+
+  const body = await req.json()
+  const { date } = body
+
+  if (!date) {
+    return NextResponse.json(
+      { error: "Data é obrigatória" },
+      { status: 400 }
+    )
+  }
+
+  const appointment = await prisma.appointment.create({
+    data: {
+      userId: user.id,
+      date: new Date(date),
+    },
+  })
+
+  return NextResponse.json(appointment, { status: 201 })
+}
+
+export async function DELETE(req: Request) {
+  const cookieStore = await cookies()
+  const sessionId = cookieStore.get("sessionId")?.value
+
+  const user = await getSession(sessionId)
+
+  if(!user) {
+    return NextResponse.json(
+      {error: "Nao autenticado"},
+      {status: 401}
+    )
+  }
+
+  const {searchParams} = new URL(req.url)
+  const appointmentId = searchParams.get("id")
+
+  if(!appointmentId){
+    return NextResponse.json(
+      {error: "ID do agendamento nao informado"},
+      {status: 400}
+    )
+  }
+
+  //vamos garantir que o agendamento pertence ao usuario
+
+  
 }
