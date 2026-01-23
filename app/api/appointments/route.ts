@@ -1,52 +1,59 @@
-import { prisma } from "@/lib/prisma";
-import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma"
+import { cookies } from "next/headers"
+import { getSession } from "@/lib/session"
+import { NextResponse } from "next/server"
 
-
-
-//criacao da api de agendamento
+//criar agendamento
 export async function POST(req: Request) {
-    try{
-        const body = await req.json()
-        const {userId, date} = body
+  try {
+    const cookieStore = await cookies()
+    const sessionId = cookieStore.get("sessionId")?.value
 
-        if (!userId || !date) {
-            return NextResponse.json(
-                {error: "Dados obrigatórios faltando"},
-                {status: 400}
-            )
-        }
+    const user = await getSession(sessionId)
 
-        const appointment = await prisma.appointment.create({
-            data: {
-                userId,
-                date: new Date(date),
-            }
-        })
-
-        return NextResponse.json(appointment, {status: 201});
-    } catch (error) {
-        return NextResponse.json(
-            {error: "Erro ao criar agendamento"},
-            {status: 500}
-        )
-    }   
-}
-
-
-//buscar agendamentos do usuário
-export async function GET(req: Request) {
-    const {searchParams} = new URL(req.url)
-    const userId = searchParams.get("userId")
-
-    if(!userId) {
-        return NextResponse.json(
-            {error: "Usuario nao informados"},
-            {status: 400}
-        )
+    if (!user) {
+      return NextResponse.json(
+        { error: "Não autorizado" },
+        { status: 401 }
+      )
     }
 
-    const appointments = await prisma.appointment.findMany({
-        where: {userId},
-        orderBy: {date: "asc"}
+    const { date } = await req.json()
+
+    if (!date) {
+      return NextResponse.json(
+        { error: "Data é obrigatória" },
+        { status: 400 }
+      )
+    }
+
+    const appointmentDate = new Date(date)
+
+    //ver se possui algum conflito
+    const conflict = await prisma.appointment.findFirst({
+      where: { date: appointmentDate }
     })
+
+    if (conflict) {
+      return NextResponse.json(
+        { error: "Horário indisponível" },
+        { status: 409 }
+      )
+    }
+
+    const appointment = await prisma.appointment.create({
+      data: {
+        userId: user.id,
+        date: appointmentDate
+      }
+    })
+
+    return NextResponse.json(appointment, { status: 201 })
+
+  } catch {
+    return NextResponse.json(
+      { error: "Erro ao criar agendamento" },
+      { status: 500 }
+    )
+  }
 }

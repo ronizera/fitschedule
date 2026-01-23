@@ -21,6 +21,7 @@ export async function getSession(sessionId: string | undefined) {
     const isExpired = session.expiresAt < new Date();
 
     if(isExpired) {
+        await prisma.session.delete({ where: { id: session.id } })
         return null
     }
 
