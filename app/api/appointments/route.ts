@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma"
 import { NextResponse } from "next/server"
 import { cookies } from "next/headers"
 import { getSession } from "@/lib/session"
+import { json } from "stream/consumers"
 
 // BUSCAR AGENDAMENTOS DO USUÁRIO LOGADO
 export async function GET() {
@@ -62,7 +63,7 @@ export async function POST(req: Request) {
 
   return NextResponse.json(appointment, { status: 201 })
 }
-
+// cancelar agendamento
 export async function DELETE(req: Request) {
   const cookieStore = await cookies()
   const sessionId = cookieStore.get("sessionId")?.value
@@ -87,6 +88,28 @@ export async function DELETE(req: Request) {
   }
 
   //vamos garantir que o agendamento pertence ao usuario
+
+  const appointment = await prisma.appointment.findFirst({
+    where: {
+      id: appointmentId,
+      userId: user.id,
+    }
+  })
+
+  if(!appointment) {
+    return NextResponse.json(
+      {error: "Agendamento nao encontrado"},
+      {status: 404}
+    )
+  }
+
+  await prisma.appointment.delete({
+    where:{
+      id: appointmentId,
+    }
+  })
+
+  return NextResponse.json({sucess: true})
 
   
 }
