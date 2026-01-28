@@ -1,61 +1,55 @@
-import {prisma} from "@/lib/prisma"
+import { prisma } from "@/lib/prisma"
 import { getSession } from "@/lib/session"
 import { cookies } from "next/headers"
 import { NextResponse } from "next/server"
 
-type Params = {
-    params: {
-        id: string
-    }
-}
-
 export async function DELETE(
-    req: Request,
-    {params}: Params
+  req: Request,
+  context: { params: Promise<{ id: string }> }
 ) {
-    try{
-        const cookieStore = await cookies()
-        const sessionId = cookieStore.get("sessionId")?.value
+  try {
+    const { id } = await context.params
+    console.log("DELETE PARAM ID:", id)
 
-        const user = await getSession(sessionId)
+    const cookieStore = await cookies()
+    const sessionId = cookieStore.get("sessionId")?.value
+    console.log("SESSION ID:", sessionId)
 
-        if(!user) {
-            return NextResponse.json(
-                {error: "Nao autorizado"},
-                {status: 401}
+    const user = await getSession(sessionId)
 
-            )
-
-        }
-
-        const appointmentId = params.id
-
-        const appointment = await prisma.appointment.findUnique({
-            where: {id: appointmentId}
-        })
-
-        if(!appointment) {
-            return NextResponse.json(
-                {error: "Agendamento nao encontrado"},
-                {status: 404}
-            )
-        }
-
-        if(appointment.userId !== user.id) {
-            return NextResponse.json(
-                {error: "Acesso negado"},
-                {status: 403}
-            )
-        } 
-
-        return NextResponse.json(
-            {message: "Agendamento cancelado"},
-            {status: 200}
-        )
-    }catch{
-        return NextResponse.json(
-            {error: "Erro ao deletar agendamento"},
-            {status: 500}
-        )
+    if (!user) {
+      return NextResponse.json(
+        { error: "Não autenticado" },
+        { status: 401 }
+      )
     }
+
+    const appointment = await prisma.appointment.findFirst({
+      where: {
+        id,
+        userId: user.id,
+      },
+    })
+
+    console.log("APPOINTMENT FOUND:", appointment)
+
+    if (!appointment) {
+      return NextResponse.json(
+        { error: "Agendamento não encontrado" },
+        { status: 404 }
+      )
+    }
+
+    await prisma.appointment.delete({
+      where: { id },
+    })
+
+    return NextResponse.json({ success: true })
+  } catch (err) {
+    console.error("DELETE ERROR:", err)
+    return NextResponse.json(
+      { error: "Erro ao cancelar agendamento" },
+      { status: 500 }
+    )
+  }
 }
