@@ -133,7 +133,7 @@ export default function DashboardPage() {
               value={date}
               min={new Date().toISOString().slice(0, 16)}
               onChange={(e) => setDate(e.target.value)}
-              className="flex-1 bg-zinc-950 border border-zinc-800 rounded px-3 py-2"
+              className="flex-1 bg-zinc-950 border border-zinc-800 rounded px-3 py-2 text-white [color-scheme:dark]"
               required
               placeholder="data"
             />
