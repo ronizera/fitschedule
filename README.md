@@ -18,10 +18,9 @@ Sistema full stack de agendamentos com autenticação, dashboard e regras de neg
 **Back-end**
 - Node.js
 - Prisma
-- PostgreSQL
+- Sqlite
 
-## 🎥 Demonstração do Projeto
-https://github.com/ronizera/fitschedule/assets/SEU_ID/fitschedule-demo.mp4
+
 
 ## ⚙️ Como rodar o projeto
 ```bash
